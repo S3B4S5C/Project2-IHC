@@ -78,22 +78,18 @@ y los muestra en:
 
 ## Impacto para la Tarea 5
 
-La especificación de la Tarea 5 no está incluida en el repositorio recibido. Según la estructura actual, una modificación de este recorrido podría requerir cambios en:
+La Tarea 5 pide agregar una relación que actualmente no existe:
 
-- las pantallas Flutter involucradas;
-- los servicios HTTP del frontend;
-- las reglas de los routers de FastAPI;
-- los modelos o schemas si cambian los datos;
-- las pruebas del backend relacionadas con la regla modificada.
+**Asignar un responsable a un cuidado y permitir marcarlo como realizado.**
 
-Los principales archivos a revisar antes de implementar cambios son:
+Actualmente los cuidados pertenecen a un usuario, pero no tienen un responsable asignado de forma independiente.
 
-```text
-frontend/lib/features/mascotas/screens/home_screen.dart
-frontend/lib/features/historial/screens/historial_screen.dart
-frontend/lib/features/historial/services/historial_service.dart
-backend/mascotas/router.py
-backend/historial/router.py
-backend/historial/models.py
-backend/tests/
-```
+Para implementarlo será necesario modificar:
+
+- `backend/mascotas/models.py`: agregar la relación entre el cuidado y un usuario responsable, por ejemplo `responsable_id`.
+- `backend/mascotas/schemas.py`: permitir enviar y devolver el responsable del cuidado.
+- `backend/mascotas/router.py`: agregar la lógica para asignar o cambiar responsable y conservar la acción existente de marcar como realizado.
+- `frontend/lib/features/mascotas/screens/`: permitir seleccionar un responsable y mostrar quién está asignado al cuidado.
+- Pruebas del backend para comprobar que la asignación se guarda correctamente.
+
+La relación debe persistir en la base de datos, por lo que después de recargar la aplicación o volver a iniciar sesión el responsable asignado debe continuar asociado al cuidado.
