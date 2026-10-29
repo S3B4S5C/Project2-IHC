@@ -19,6 +19,7 @@ class _EditarMascotaScreenState extends State<EditarMascotaScreen> {
   late TextEditingController _tipoController;
   late TextEditingController _cuidadoController;
   late TextEditingController _fechaController;
+  late TextEditingController _responsableController;
   bool _guardando = false;
 
   @override
@@ -28,6 +29,9 @@ class _EditarMascotaScreenState extends State<EditarMascotaScreen> {
     _tipoController = TextEditingController(text: widget.mascota['tipo']);
     _cuidadoController = TextEditingController(text: widget.mascota['cuidado']);
     _fechaController = TextEditingController(text: widget.mascota['fecha']);
+    _responsableController = TextEditingController(
+      text: widget.mascota['responsable_correo'] ?? '',
+    );
   }
 
   Future<void> _actualizarMascota() async {
@@ -50,6 +54,7 @@ class _EditarMascotaScreenState extends State<EditarMascotaScreen> {
           "tipo": _tipoController.text,
           "cuidado": _cuidadoController.text,
           "fecha": _fechaController.text,
+          "responsable_correo": _responsableController.text.trim(),
         }),
       );
 
@@ -179,6 +184,15 @@ class _EditarMascotaScreenState extends State<EditarMascotaScreen> {
               controller: _cuidadoController,
               decoration: InputDecoration(
                 labelText: "Cuidado",
+                border: OutlineInputBorder(),
+              ),
+            ),
+            SizedBox(height: 12),
+            TextField(
+              controller: _responsableController,
+              keyboardType: TextInputType.emailAddress,
+              decoration: InputDecoration(
+                labelText: "Responsable (correo registrado)",
                 border: OutlineInputBorder(),
               ),
             ),

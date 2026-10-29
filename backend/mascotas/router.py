@@ -1,15 +1,25 @@
 # backend/mascotas/router.py
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 from core.database import get_db
 from . import models, schemas
 from historial.models import Evento
 from typing import Optional
 from datetime import date
 
-from usuarios.router import obtener_usuario_token 
+from usuarios.router import obtener_usuario_token
+from usuarios.models import UsuarioDB
 
 router = APIRouter()
+
+def _responsable_id(correo: Optional[str], db: Session):
+    if not correo:
+        return None
+    responsable = db.query(UsuarioDB).filter(UsuarioDB.correo == correo).first()
+    if not responsable:
+        raise HTTPException(status_code=400, detail="El responsable debe ser un usuario registrado")
+    return responsable.id
 
 @router.get("/lista", response_model=list[schemas.Mascota])
 def mis_mascotas(
@@ -21,7 +31,12 @@ def mis_mascotas(
     db: Session = Depends(get_db), 
     usuario = Depends(obtener_usuario_token)
 ):
-    query = db.query(models.Mascota).filter(models.Mascota.usuario_id == usuario.id)
+    query = db.query(models.Mascota).filter(
+        or_(
+            models.Mascota.usuario_id == usuario.id,
+            models.Mascota.responsable_id == usuario.id
+        )
+    )
     if nombre:
         query = query.filter(models.Mascota.nombre.ilike(f"%{nombre}%"))
     if estado is not None:
@@ -34,6 +49,8 @@ def mis_mascotas(
         query = query.filter(models.Mascota.fecha <= fecha_fin)
     # Ordenados por fecha para ver primero lo más próximo
     mascotas = query.order_by(models.Mascota.fecha).all()
+    for mascota in mascotas:
+        mascota.puede_editar = mascota.usuario_id == usuario.id
     return mascotas
 
 @router.post("/crear", response_model=schemas.Mascota)
@@ -47,7 +64,8 @@ def crear_mascota(mascota: schemas.MascotaCreate, db: Session = Depends(get_db),
         tipo=mascota.tipo,
         cuidado=mascota.cuidado,
         fecha=mascota.fecha,
-        usuario_id=usuario.id
+        usuario_id=usuario.id,
+        responsable_id=_responsable_id(mascota.responsable_correo, db)
     )
     db.add(nueva_mascota)
     db.commit()
@@ -58,7 +76,10 @@ def crear_mascota(mascota: schemas.MascotaCreate, db: Session = Depends(get_db),
 def completar_cuidado(id: int, db: Session = Depends(get_db), usuario = Depends(obtener_usuario_token)):
     mascota = db.query(models.Mascota).filter(
         models.Mascota.id == id,
-        models.Mascota.usuario_id == usuario.id
+        or_(
+            models.Mascota.usuario_id == usuario.id,
+            models.Mascota.responsable_id == usuario.id
+        )
     ).first()
 
     if not mascota:
@@ -71,7 +92,7 @@ def completar_cuidado(id: int, db: Session = Depends(get_db), usuario = Depends(
     mascota.estado = True
     # Guardamos el evento para el historial
     db.add(Evento(
-        usuario_id=usuario.id,
+        usuario_id=mascota.usuario_id,
         mascota_id=mascota.id,
         mascota_nombre=mascota.nombre,
         cuidado=mascota.cuidado,
@@ -112,6 +133,7 @@ def editar_mascota(id: int, mascota_actualizada: schemas.MascotaCreate, db: Sess
     mascota.tipo = mascota_actualizada.tipo
     mascota.cuidado = mascota_actualizada.cuidado
     mascota.fecha = mascota_actualizada.fecha
+    mascota.responsable_id = _responsable_id(mascota_actualizada.responsable_correo, db)
     
     db.commit()
     db.refresh(mascota)

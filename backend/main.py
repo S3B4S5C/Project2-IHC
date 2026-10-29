@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from sqlalchemy import text
 from fastapi.middleware.cors import CORSMiddleware
 from core.database import engine, Base
 from usuarios.router import router as usuarios_router
@@ -6,6 +7,10 @@ from mascotas.router import router as mascotas_router
 from historial.router import router as historial_router
 # Crear las tablas automáticamente al iniciar
 Base.metadata.create_all(bind=engine)
+with engine.begin() as connection:
+    connection.execute(text(
+        "ALTER TABLE mascotas ADD COLUMN IF NOT EXISTS responsable_id INTEGER REFERENCES usuarios(id)"
+    ))
 
 app = FastAPI(title="Mascota al Día API", version="1.0")
 

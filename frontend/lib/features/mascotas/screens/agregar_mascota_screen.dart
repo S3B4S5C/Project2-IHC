@@ -17,6 +17,7 @@ class _AgregarMascotaScreenState extends State<AgregarMascotaScreen> {
   final _tipoController = TextEditingController();
   final _cuidadoController = TextEditingController();
   final _fechaController = TextEditingController();
+  final _responsableController = TextEditingController();
 
   bool _guardando = false;
 
@@ -25,9 +26,10 @@ class _AgregarMascotaScreenState extends State<AgregarMascotaScreen> {
     if (_nombreController.text.trim().isEmpty ||
         _tipoController.text.trim().isEmpty ||
         _cuidadoController.text.trim().isEmpty ||
-        _fechaController.text.isEmpty) {
+        _fechaController.text.isEmpty ||
+        _responsableController.text.trim().isEmpty) {
       _mostrarMensaje(
-        "Completa nombre, tipo, cuidado y fecha para guardar.",
+        "Completa nombre, tipo, cuidado, fecha y responsable para guardar.",
         Colors.red,
       );
       return;
@@ -53,6 +55,7 @@ class _AgregarMascotaScreenState extends State<AgregarMascotaScreen> {
           "tipo": _tipoController.text,
           "cuidado": _cuidadoController.text,
           "fecha": _fechaController.text,
+          "responsable_correo": _responsableController.text.trim(),
         }),
       );
 
@@ -171,6 +174,15 @@ class _AgregarMascotaScreenState extends State<AgregarMascotaScreen> {
               controller: _cuidadoController,
               decoration: InputDecoration(
                 labelText: "Cuidado (ej. vacuna)",
+                border: OutlineInputBorder(),
+              ),
+            ),
+            SizedBox(height: 12),
+            TextField(
+              controller: _responsableController,
+              keyboardType: TextInputType.emailAddress,
+              decoration: InputDecoration(
+                labelText: "Responsable (correo registrado)",
                 border: OutlineInputBorder(),
               ),
             ),

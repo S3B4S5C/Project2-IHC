@@ -611,6 +611,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     itemBuilder: (context, index) {
                       final mascota = _mascotas[index];
                       final bool estaRealizado = mascota['estado'];
+                      final bool puedeEditar = mascota['puede_editar'] ?? true;
 
                       return Card(
                         color: Colors.grey[200],
@@ -637,6 +638,10 @@ class _HomeScreenState extends State<HomeScreen> {
                               SizedBox(height: 8),
                               Text(
                                 '${mascota['cuidado']} · ${mascota['fecha']}',
+                              ),
+                              SizedBox(height: 4),
+                              Text(
+                                'Responsable: ${mascota['responsable_nombre'] ?? 'Sin asignar'}',
                               ),
                               SizedBox(height: 12),
 
@@ -683,16 +688,16 @@ class _HomeScreenState extends State<HomeScreen> {
                                   Expanded(
                                     child: ElevatedButton(
                                       style: ElevatedButton.styleFrom(
-                                        backgroundColor: estaRealizado
+                                        backgroundColor: estaRealizado || !puedeEditar
                                             ? Colors.grey[300]
                                             : Colors.white,
-                                        foregroundColor: estaRealizado
+                                        foregroundColor: estaRealizado || !puedeEditar
                                             ? Colors.grey[600]
                                             : Colors.black,
                                         side: BorderSide(color: Colors.grey),
                                         elevation: 0,
                                       ),
-                                      onPressed: () async {
+                                      onPressed: puedeEditar ? () async {
                                         if (estaRealizado) {
                                           ScaffoldMessenger.of(context)
                                               .showSnackBar(
@@ -716,7 +721,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                           if (resultado == true)
                                             _cargarMascotas();
                                         }
-                                      },
+                                      } : null,
                                       child: Text("Editar"),
                                     ),
                                   ),
@@ -728,8 +733,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                         foregroundColor: Colors.red[900],
                                         elevation: 0,
                                       ),
-                                      onPressed: () =>
-                                          _confirmarEliminar(mascota['id']),
+                                      onPressed: puedeEditar
+                                          ? () => _confirmarEliminar(mascota['id'])
+                                          : null,
                                       child: Text("Eliminar"),
                                     ),
                                   ),
