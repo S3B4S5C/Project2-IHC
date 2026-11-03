@@ -42,23 +42,50 @@ async function prepararCuidado(request, periodicidadDias) {
   });
   expect(creacion.ok()).toBeTruthy();
   const mascota = await creacion.json();
-  return { token, fecha, mascota };
+  return { token, fecha, mascota, correo, password };
 }
 
-async function abrirPanel(page, token) {
-  await page.addInitScript((jwt) => {
-    localStorage.setItem('flutter.jwt_token', JSON.stringify(jwt));
-    localStorage.setItem('flutter.usuario_nombre', JSON.stringify('Prueba E2E'));
-  }, token);
-  await page.goto('/');
+async function escribirCampo(page, campo, valor) {
+  await campo.click();
+  await expect(campo).toBeFocused();
+  await page.waitForTimeout(200);
+  await campo.fill('');
+  await campo.pressSequentially(valor, { delay: 25 });
+  await expect(campo).toHaveValue(valor);
+}
+
+async function abrirPanel(page, correo, password) {
+  page.on('pageerror', (error) => console.error(`[Flutter web] ${error.message}`));
+  const response = await page.goto('/');
+  expect(response?.ok()).toBeTruthy();
   await activarAccesibilidad(page);
-  await expect(page.getByLabel('Mascota al Día - Panel')).toBeVisible();
+
+  const campoCorreo = page.getByLabel('Correo electrónico');
+  const campoPassword = page.getByLabel('Contraseña');
+  await expect(campoCorreo).toBeVisible({ timeout: 45000 });
+  await escribirCampo(page, campoCorreo, correo);
+  await escribirCampo(page, campoPassword, password);
+
+  const loginResponse = page.waitForResponse(
+    (response) => response.url().endsWith('/usuarios/login') && response.request().method() === 'POST',
+    { timeout: 15000 },
+  );
+  await page.getByRole('button', { name: 'Ingresar' }).click();
+  const respuesta = await loginResponse;
+  const enviado = respuesta.request().postDataJSON();
+  expect(enviado.correo, 'El correo enviado por Flutter no coincide').toBe(correo);
+  expect(enviado.password === password, 'La contraseña enviada por Flutter no coincide').toBe(true);
+  expect(respuesta.status(), `El login HTTP falló: ${await respuesta.text()}`).toBe(200);
+  await expect(page.getByRole('button', { name: 'Historial' })).toBeVisible({ timeout: 15000 });
 }
 
 async function activarAccesibilidad(page) {
   const boton = page.locator('flt-semantics-placeholder').first();
-  await boton.waitFor({ state: 'attached' });
-  await boton.evaluate((el) => el.click());
+  if (await boton.count()) await boton.evaluate((el) => el.click());
+  await expect.poll(() => page.locator('flt-semantics').count(), {
+    message: 'Flutter web no expuso el árbol de accesibilidad',
+    timeout: 45000,
+  }).toBeGreaterThan(0);
 }
 
 async function marcarRealizado(page) {

@@ -11,10 +11,10 @@ module.exports = defineConfig({
     trace: 'retain-on-failure',
   },
   webServer: {
-    command: 'flutter run -d web-server --web-hostname=127.0.0.1 --web-port=7357',
+    command: 'flutter build web --release --dart-define=E2E_SEMANTICS=true && node ../e2e/serve.cjs',
     cwd: path.resolve(__dirname, '../frontend'),
     url: 'http://127.0.0.1:7357',
-    reuseExistingServer: !process.env.CI,
-    timeout: 180000,
+    reuseExistingServer: false,
+    timeout: 240000,
   },
 });
