@@ -12,6 +12,7 @@ class Mascota(Base):
     estado = Column(Boolean, default = False)
     usuario_id = Column(Integer, ForeignKey("usuarios.id"))
     responsable_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
+    periodicidad_dias = Column(Integer, nullable=True)
     responsable = relationship("UsuarioDB", foreign_keys=[responsable_id])
 
     @property

@@ -20,6 +20,7 @@ class _EditarMascotaScreenState extends State<EditarMascotaScreen> {
   late TextEditingController _cuidadoController;
   late TextEditingController _fechaController;
   late TextEditingController _responsableController;
+  late TextEditingController _periodicidadController;
   bool _guardando = false;
 
   @override
@@ -32,10 +33,19 @@ class _EditarMascotaScreenState extends State<EditarMascotaScreen> {
     _responsableController = TextEditingController(
       text: widget.mascota['responsable_correo'] ?? '',
     );
+    _periodicidadController = TextEditingController(
+      text: widget.mascota['periodicidad_dias']?.toString() ?? '',
+    );
   }
 
   Future<void> _actualizarMascota() async {
     if (_nombreController.text.isEmpty || _fechaController.text.isEmpty) return;
+
+    final dias = _periodicidadController.text.trim();
+    if (dias.isNotEmpty && (int.tryParse(dias) == null || int.parse(dias) < 1)) {
+      _mostrarError("La periodicidad debe ser un número de días positivo.");
+      return;
+    }
 
     setState(() => _guardando = true);
     final prefs = await SharedPreferences.getInstance();
@@ -55,6 +65,7 @@ class _EditarMascotaScreenState extends State<EditarMascotaScreen> {
           "cuidado": _cuidadoController.text,
           "fecha": _fechaController.text,
           "responsable_correo": _responsableController.text.trim(),
+          "periodicidad_dias": dias.isEmpty ? null : int.parse(dias),
         }),
       );
 
@@ -208,6 +219,15 @@ class _EditarMascotaScreenState extends State<EditarMascotaScreen> {
                 helperMaxLines: 2,
                 border: OutlineInputBorder(),
                 suffixIcon: Icon(Icons.calendar_today, color: Colors.black),
+              ),
+            ),
+            SizedBox(height: 12),
+            TextField(
+              controller: _periodicidadController,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: "Repetir cada N días (opcional)",
+                border: OutlineInputBorder(),
               ),
             ),
             SizedBox(height: 24),

@@ -6,7 +6,7 @@ from core.database import get_db
 from . import models, schemas
 from historial.models import Evento
 from typing import Optional
-from datetime import date
+from datetime import date, timedelta
 
 from usuarios.router import obtener_usuario_token
 from usuarios.models import UsuarioDB
@@ -65,7 +65,8 @@ def crear_mascota(mascota: schemas.MascotaCreate, db: Session = Depends(get_db),
         cuidado=mascota.cuidado,
         fecha=mascota.fecha,
         usuario_id=usuario.id,
-        responsable_id=_responsable_id(mascota.responsable_correo, db)
+        responsable_id=_responsable_id(mascota.responsable_correo, db),
+        periodicidad_dias=mascota.periodicidad_dias
     )
     db.add(nueva_mascota)
     db.commit()
@@ -89,7 +90,15 @@ def completar_cuidado(id: int, db: Session = Depends(get_db), usuario = Depends(
     if mascota.estado:
         raise HTTPException(status_code=400, detail="El cuidado ya estaba completado")
 
-    mascota.estado = True
+    fecha_realizada = mascota.fecha
+    proxima_fecha = None
+    if mascota.periodicidad_dias:
+        proxima_fecha = fecha_realizada + timedelta(days=mascota.periodicidad_dias)
+        while proxima_fecha <= date.today():
+            proxima_fecha += timedelta(days=mascota.periodicidad_dias)
+        mascota.fecha = proxima_fecha
+    else:
+        mascota.estado = True
     # Guardamos el evento para el historial
     db.add(Evento(
         usuario_id=mascota.usuario_id,
@@ -97,10 +106,10 @@ def completar_cuidado(id: int, db: Session = Depends(get_db), usuario = Depends(
         mascota_nombre=mascota.nombre,
         cuidado=mascota.cuidado,
         tipo="realizado",
-        detalle=f"Programado para el {mascota.fecha}"
+        detalle=f"Programado para el {fecha_realizada}"
     ))
     db.commit()
-    return {"mensaje": "Cuidado completado exitosamente"}
+    return {"mensaje": "Cuidado completado exitosamente", "proxima_fecha": proxima_fecha}
 
 
 @router.put("/editar/{id}", response_model=schemas.Mascota)
@@ -134,6 +143,7 @@ def editar_mascota(id: int, mascota_actualizada: schemas.MascotaCreate, db: Sess
     mascota.cuidado = mascota_actualizada.cuidado
     mascota.fecha = mascota_actualizada.fecha
     mascota.responsable_id = _responsable_id(mascota_actualizada.responsable_correo, db)
+    mascota.periodicidad_dias = mascota_actualizada.periodicidad_dias
     
     db.commit()
     db.refresh(mascota)

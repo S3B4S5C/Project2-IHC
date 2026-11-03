@@ -287,10 +287,16 @@ class _HomeScreenState extends State<HomeScreen> {
       );
 
       if (response.statusCode == 200) {
-        // Cambiamos solo esta tarjeta para que siga visible en su lugar
-        setState(() => mascota['estado'] = true);
+        final proximaFecha = json.decode(response.body)['proxima_fecha'];
+        if (proximaFecha != null) {
+          await _cargarMascotas();
+        } else {
+          setState(() => mascota['estado'] = true);
+        }
         _mostrarMensaje(
-          '${mascota['cuidado']} de ${mascota['nombre']} marcado como realizado.',
+          proximaFecha != null
+              ? 'Cuidado realizado. Próxima fecha: $proximaFecha'
+              : '${mascota['cuidado']} de ${mascota['nombre']} marcado como realizado.',
           Colors.green,
         );
       } else {
@@ -314,7 +320,9 @@ class _HomeScreenState extends State<HomeScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.zero),
         title: Text("¿Marcar como realizado?"),
         content: Text(
-          "${mascota['cuidado']} de ${mascota['nombre']}. Después ya no podrás editarlo ni reprogramarlo.",
+          mascota['periodicidad_dias'] != null
+              ? "${mascota['cuidado']} de ${mascota['nombre']}. Se programará la siguiente fecha."
+              : "${mascota['cuidado']} de ${mascota['nombre']}. Después ya no podrás editarlo ni reprogramarlo.",
         ),
         actions: [
           TextButton(
@@ -643,6 +651,8 @@ class _HomeScreenState extends State<HomeScreen> {
                               Text(
                                 'Responsable: ${mascota['responsable_nombre'] ?? 'Sin asignar'}',
                               ),
+                              if (mascota['periodicidad_dias'] != null)
+                                Text('Cada ${mascota['periodicidad_dias']} días'),
                               SizedBox(height: 12),
 
                               if (!estaRealizado)

@@ -18,6 +18,7 @@ class _AgregarMascotaScreenState extends State<AgregarMascotaScreen> {
   final _cuidadoController = TextEditingController();
   final _fechaController = TextEditingController();
   final _responsableController = TextEditingController();
+  final _periodicidadController = TextEditingController();
 
   bool _guardando = false;
 
@@ -32,6 +33,12 @@ class _AgregarMascotaScreenState extends State<AgregarMascotaScreen> {
         "Completa nombre, tipo, cuidado, fecha y responsable para guardar.",
         Colors.red,
       );
+      return;
+    }
+
+    final dias = _periodicidadController.text.trim();
+    if (dias.isNotEmpty && (int.tryParse(dias) == null || int.parse(dias) < 1)) {
+      _mostrarMensaje("La periodicidad debe ser un número de días positivo.", Colors.red);
       return;
     }
 
@@ -56,6 +63,7 @@ class _AgregarMascotaScreenState extends State<AgregarMascotaScreen> {
           "cuidado": _cuidadoController.text,
           "fecha": _fechaController.text,
           "responsable_correo": _responsableController.text.trim(),
+          "periodicidad_dias": dias.isEmpty ? null : int.parse(dias),
         }),
       );
 
@@ -202,6 +210,15 @@ class _AgregarMascotaScreenState extends State<AgregarMascotaScreen> {
               ),
             ),
 
+            SizedBox(height: 12),
+            TextField(
+              controller: _periodicidadController,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: "Repetir cada N días (opcional)",
+                border: OutlineInputBorder(),
+              ),
+            ),
             SizedBox(height: 24),
             SizedBox(
               width: double.infinity,

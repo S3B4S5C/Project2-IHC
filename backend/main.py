@@ -11,6 +11,9 @@ with engine.begin() as connection:
     connection.execute(text(
         "ALTER TABLE mascotas ADD COLUMN IF NOT EXISTS responsable_id INTEGER REFERENCES usuarios(id)"
     ))
+    connection.execute(text(
+        "ALTER TABLE mascotas ADD COLUMN IF NOT EXISTS periodicidad_dias INTEGER"
+    ))
 
 app = FastAPI(title="Mascota al Día API", version="1.0")
 
