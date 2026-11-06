@@ -608,7 +608,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: Text(
                         _hayFiltros()
                             ? "No se encontraron cuidados con estos filtros."
-                            : "Aún no tienes cuidados registrados. Toca + para agregar el primero.",
+                            : "Aún no tienes cuidados registrados. Usa Agregar cuidado para registrar el primero.",
                         textAlign: TextAlign.center,
                         style: TextStyle(color: Colors.grey, fontSize: 16),
                       ),
@@ -760,7 +760,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: FloatingActionButton.extended(
         onPressed: () async {
           final resultado = await Navigator.push(
             context,
@@ -773,7 +773,8 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: Colors.lightBlue,
         foregroundColor: Colors.white,
         tooltip: "Agregar cuidado",
-        child: Icon(Icons.add),
+        icon: Icon(Icons.add),
+        label: Text("Agregar cuidado"),
       ),
     );
   }

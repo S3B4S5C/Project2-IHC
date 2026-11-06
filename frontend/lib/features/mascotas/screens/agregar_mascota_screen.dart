@@ -147,7 +147,7 @@ class _AgregarMascotaScreenState extends State<AgregarMascotaScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: Text("Nueva Mascota"),
+        title: Text("Agregar cuidado"),
         backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
       ),
@@ -231,7 +231,7 @@ class _AgregarMascotaScreenState extends State<AgregarMascotaScreen> {
                 onPressed: _guardando ? null : _guardarMascota,
                 child: _guardando
                     ? Text("Guardando...")
-                    : Text("Guardar Mascota"),
+                    : Text("Guardar cuidado"),
               ),
             ),
             SizedBox(height: 12),
