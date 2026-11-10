@@ -100,7 +100,7 @@ class _HistorialScreenState extends State<HistorialScreen> {
         ),
         title: Text(titulo, style: TextStyle(fontWeight: FontWeight.bold)),
         subtitle: Text(
-          "${evento['detalle']}\nRegistrado el ${_formatearFecha(evento['fecha_hora'])}",
+          "${evento['detalle']}\nAutor: ${evento['autor_nombre'] ?? 'No registrado'}\nRegistrado el ${_formatearFecha(evento['fecha_hora'])}",
         ),
         isThreeLine: true,
       ),

@@ -12,6 +12,7 @@ import '../../auth/screens/login_screen.dart';
 import 'agregar_mascota_screen.dart';
 import 'editar_mascota_screen.dart';
 import '../../historial/screens/historial_screen.dart';
+import '../../compartidos/screens/compartidos_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   @override
@@ -483,6 +484,24 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
 
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () async {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => CompartidosScreen()),
+                  );
+                  _cargarMascotas();
+                },
+                icon: Icon(Icons.group_outlined),
+                label: Text("Cuidados compartidos e invitaciones"),
+              ),
+            ),
+          ),
+
           // --- 1. BARRA DE BÚSQUEDA ---
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -620,6 +639,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       final mascota = _mascotas[index];
                       final bool estaRealizado = mascota['estado'];
                       final bool puedeEditar = mascota['puede_editar'] ?? true;
+                      final bool puedeMarcar = mascota['puede_marcar'] ?? true;
+                      final bool puedeEliminar = mascota['puede_eliminar'] ?? puedeEditar;
 
                       return Card(
                         color: Colors.grey[200],
@@ -653,6 +674,10 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                               if (mascota['periodicidad_dias'] != null)
                                 Text('Cada ${mascota['periodicidad_dias']} días'),
+                              if (mascota['permiso_compartido'] != null)
+                                Text(mascota['permiso_compartido'] == 'gestion'
+                                    ? "Compartido: gestión"
+                                    : "Compartido: solo consulta"),
                               SizedBox(height: 12),
 
                               if (!estaRealizado)
@@ -666,7 +691,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     ),
                                   ),
                                 ),
-                              if (!estaRealizado)
+                              if (!estaRealizado && puedeMarcar)
                                 SizedBox(
                                   width: double.infinity,
                                   child: ElevatedButton(
@@ -743,7 +768,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                         foregroundColor: Colors.red[900],
                                         elevation: 0,
                                       ),
-                                      onPressed: puedeEditar
+                                      onPressed: puedeEliminar
                                           ? () => _confirmarEliminar(mascota['id'])
                                           : null,
                                       child: Text("Eliminar"),
