@@ -6,10 +6,12 @@ from core.database import get_db
 from . import models, schemas
 from historial.models import Evento
 from typing import Optional
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 from usuarios.router import obtener_usuario_token
 from usuarios.models import UsuarioDB
+from compartidos.models import InvitacionCuidado
+from compartidos.permisos import puede_administrar, puede_editar, permiso_usuario
 
 router = APIRouter()
 
@@ -31,12 +33,15 @@ def mis_mascotas(
     db: Session = Depends(get_db), 
     usuario = Depends(obtener_usuario_token)
 ):
-    query = db.query(models.Mascota).filter(
-        or_(
-            models.Mascota.usuario_id == usuario.id,
-            models.Mascota.responsable_id == usuario.id
-        )
+    compartidas = db.query(InvitacionCuidado.mascota_id).filter(
+        InvitacionCuidado.invitado_id == usuario.id,
+        InvitacionCuidado.estado == "aceptada"
     )
+    query = db.query(models.Mascota).filter(or_(
+        models.Mascota.usuario_id == usuario.id,
+        models.Mascota.responsable_id == usuario.id,
+        models.Mascota.id.in_(compartidas)
+    ))
     if nombre:
         query = query.filter(models.Mascota.nombre.ilike(f"%{nombre}%"))
     if estado is not None:
@@ -50,7 +55,12 @@ def mis_mascotas(
     # Ordenados por fecha para ver primero lo más próximo
     mascotas = query.order_by(models.Mascota.fecha).all()
     for mascota in mascotas:
-        mascota.puede_editar = mascota.usuario_id == usuario.id
+        permiso = permiso_usuario(db, mascota, usuario.id)
+        mascota.puede_editar = puede_editar(db, mascota, usuario.id)
+        mascota.puede_marcar = permiso == "gestion"
+        mascota.puede_eliminar = mascota.usuario_id == usuario.id
+        mascota.puede_administrar_accesos = puede_administrar(mascota, usuario.id)
+        mascota.permiso_compartido = None if mascota.usuario_id == usuario.id or mascota.responsable_id == usuario.id else permiso
     return mascotas
 
 @router.post("/crear", response_model=schemas.Mascota)
@@ -75,16 +85,11 @@ def crear_mascota(mascota: schemas.MascotaCreate, db: Session = Depends(get_db),
 
 @router.put("/{id}/completar")
 def completar_cuidado(id: int, db: Session = Depends(get_db), usuario = Depends(obtener_usuario_token)):
-    mascota = db.query(models.Mascota).filter(
-        models.Mascota.id == id,
-        or_(
-            models.Mascota.usuario_id == usuario.id,
-            models.Mascota.responsable_id == usuario.id
-        )
-    ).first()
-
-    if not mascota:
-        raise HTTPException(status_code=404, detail="Mascota no encontrada o no es tuya")
+    mascota = db.query(models.Mascota).filter(models.Mascota.id == id).first()
+    if not mascota or permiso_usuario(db, mascota, usuario.id) is None:
+        raise HTTPException(status_code=404, detail="Cuidado no encontrado")
+    if permiso_usuario(db, mascota, usuario.id) != "gestion":
+        raise HTTPException(status_code=403, detail="No tienes permiso de gestión")
 
     # No se puede completar un cuidado que ya está completado
     if mascota.estado:
@@ -106,7 +111,9 @@ def completar_cuidado(id: int, db: Session = Depends(get_db), usuario = Depends(
         mascota_nombre=mascota.nombre,
         cuidado=mascota.cuidado,
         tipo="realizado",
-        detalle=f"Programado para el {fecha_realizada}"
+        detalle=f"Programado para el {fecha_realizada}",
+        autor_id=usuario.id,
+        autor_nombre=getattr(usuario, "nombre", usuario.correo)
     ))
     db.commit()
     return {"mensaje": "Cuidado completado exitosamente", "proxima_fecha": proxima_fecha}
@@ -114,11 +121,12 @@ def completar_cuidado(id: int, db: Session = Depends(get_db), usuario = Depends(
 
 @router.put("/editar/{id}", response_model=schemas.Mascota)
 def editar_mascota(id: int, mascota_actualizada: schemas.MascotaCreate, db: Session = Depends(get_db), usuario = Depends(obtener_usuario_token)):
-    mascota = db.query(models.Mascota).filter(models.Mascota.id == id, models.Mascota.usuario_id == usuario.id).first()
-    
-    if not mascota:
-        raise HTTPException(status_code=404, detail="Mascota no encontrada")
-    
+    mascota = db.query(models.Mascota).filter(models.Mascota.id == id).first()
+    if not mascota or permiso_usuario(db, mascota, usuario.id) is None:
+        raise HTTPException(status_code=404, detail="Cuidado no encontrado")
+    if not puede_editar(db, mascota, usuario.id):
+        raise HTTPException(status_code=403, detail="No tienes permiso para editar")
+
     if mascota.estado:
         raise HTTPException(status_code=400, detail="No puedes editar un cuidado que ya fue realizado.")
 
@@ -134,7 +142,9 @@ def editar_mascota(id: int, mascota_actualizada: schemas.MascotaCreate, db: Sess
             mascota_nombre=mascota_actualizada.nombre,
             cuidado=mascota_actualizada.cuidado,
             tipo="reprogramado",
-            detalle=f"Del {mascota.fecha} al {mascota_actualizada.fecha}"
+            detalle=f"Del {mascota.fecha} al {mascota_actualizada.fecha}",
+            autor_id=usuario.id,
+            autor_nombre=getattr(usuario, "nombre", usuario.correo)
         ))
 
     # Actualizamos los datos
@@ -142,7 +152,14 @@ def editar_mascota(id: int, mascota_actualizada: schemas.MascotaCreate, db: Sess
     mascota.tipo = mascota_actualizada.tipo
     mascota.cuidado = mascota_actualizada.cuidado
     mascota.fecha = mascota_actualizada.fecha
-    mascota.responsable_id = _responsable_id(mascota_actualizada.responsable_correo, db)
+    if usuario.id == mascota.usuario_id:
+        nuevo_responsable = _responsable_id(mascota_actualizada.responsable_correo, db)
+        if nuevo_responsable != mascota.responsable_id:
+            db.query(InvitacionCuidado).filter(
+                InvitacionCuidado.mascota_id == mascota.id,
+                InvitacionCuidado.estado.in_(["pendiente", "aceptada"])
+            ).update({"estado": "revocada", "revocada_en": datetime.utcnow()}, synchronize_session=False)
+        mascota.responsable_id = nuevo_responsable
     mascota.periodicidad_dias = mascota_actualizada.periodicidad_dias
     
     db.commit()

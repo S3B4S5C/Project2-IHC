@@ -23,6 +23,10 @@ class Mascota(BaseModel):
     responsable_nombre: Optional[str] = None
     responsable_correo: Optional[str] = None
     puede_editar: bool = True
+    puede_marcar: bool = True
+    puede_eliminar: bool = True
+    puede_administrar_accesos: bool = False
+    permiso_compartido: Optional[str] = None
 
     class Config:
         orm_mode=True
