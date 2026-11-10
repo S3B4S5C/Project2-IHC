@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'features/auth/screens/login_screen.dart';
@@ -6,6 +7,9 @@ import 'features/mascotas/screens/home_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  if (const bool.fromEnvironment('E2E_SEMANTICS')) {
+    SemanticsBinding.instance.ensureSemantics();
+  }
   final prefs = await SharedPreferences.getInstance();
   final String? token = prefs.getString('jwt_token');
 
