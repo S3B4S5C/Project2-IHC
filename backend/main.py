@@ -5,6 +5,7 @@ from core.database import engine, Base
 from usuarios.router import router as usuarios_router
 from mascotas.router import router as mascotas_router
 from historial.router import router as historial_router
+from compartidos import models as compartidos_models
 # Crear las tablas automáticamente al iniciar
 Base.metadata.create_all(bind=engine)
 with engine.begin() as connection:
@@ -13,6 +14,12 @@ with engine.begin() as connection:
     ))
     connection.execute(text(
         "ALTER TABLE mascotas ADD COLUMN IF NOT EXISTS periodicidad_dias INTEGER"
+    ))
+    connection.execute(text(
+        "ALTER TABLE eventos ADD COLUMN IF NOT EXISTS autor_id INTEGER REFERENCES usuarios(id)"
+    ))
+    connection.execute(text(
+        "ALTER TABLE eventos ADD COLUMN IF NOT EXISTS autor_nombre VARCHAR"
     ))
 
 app = FastAPI(title="Mascota al Día API", version="1.0")

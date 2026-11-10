@@ -13,3 +13,5 @@ class Evento(Base):
     tipo = Column(String)  # "realizado" o "reprogramado"
     detalle = Column(String)
     fecha_hora = Column(DateTime, default=datetime.now)
+    autor_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
+    autor_nombre = Column(String, nullable=True)
